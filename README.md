@@ -67,3 +67,34 @@ TailsUp is a mobile application that connects pet owners with reliable, verified
 
 ![architecture](https://github.com/user-attachments/assets/216282e5-3de0-48e3-8e6c-18c3dfd2c508)
 
+
+## High-Level Architecture Diagram
+
+### 1. **Presentation Layer (Frontend)**
+- **Technology:** React Native
+- **Role:** Manages user interactions, UI rendering, and communicates with the backend via GraphQL.
+- **Key Features:** 
+  - User registration & login
+  - Profile management (pets and sitters)
+  - Search and filter sitters
+  - Booking and real-time notifications (using Google Maps API for geolocation)
+
+### 2. **Business Logic Layer (Backend)**
+- **Technology:** AWS Amplify, GraphQL
+- **Role:** Handles core app logic such as pet-sitter matching, bookings, payments, and authentication.
+- **Key Features:**
+  - Manages business workflows and processes (booking, sitter matching)
+  - Payment processing (via Stripe/PayPal)
+  - Session management and user authentication
+  - Notifications (real-time updates)
+
+### 3. **Data Access Layer (Database and External Services)**
+- **Technology:** AWS S3, Google Maps API, Stripe/PayPal
+- **Role:** Stores and retrieves data from the database and interacts with third-party services (e.g., payments, geolocation).
+- **Key Features:**
+  - Data storage for user profiles, pet profiles, sitter profiles, bookings
+  - Secure payment processing
+  - Geolocation services for sitters via Google Maps API
+
+![architecture](https://github.com/user-attachments/assets/216282e5-3de0-48e3-8e6c-18c3dfd2c508)
+
