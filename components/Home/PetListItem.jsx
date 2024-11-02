@@ -2,6 +2,7 @@ import { View, Text, Image, TouchableOpacity } from "react-native";
 import React from "react";
 import Colors from "../../constants/Colors";
 import { useRouter } from "expo-router";
+import MarkFav from "./../../components/MarkFav";
 export default function PetListItem({ pet }) {
     const router = useRouter();
     return (
@@ -26,7 +27,9 @@ export default function PetListItem({ pet }) {
                     right: 10,
                     top: 10,
                 }}
-            ></View>
+            >
+                <MarkFav pet={pet} color={"white"} />
+            </View>
             <Image
                 source={{ uri: pet?.imageUrl }}
                 style={{
