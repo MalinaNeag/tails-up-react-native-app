@@ -135,7 +135,7 @@ export default function LoginScreen() {
                 }}
             >
                 <Pressable
-                    onPress={onPress} // Add this line
+                    onPress={onPress}
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
                     style={{
