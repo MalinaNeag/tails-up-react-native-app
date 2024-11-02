@@ -1,9 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import React from "react";
-import Header from "../../components/Home/Header";
-import Slider from "../../components/Home/Slider";
-import PetListByCategory from "../../components/Home/PetListByCategory";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import React from 'react'
+import { useAuth } from '@clerk/clerk-expo'
+import Header from '../../components/Home/Header'
+import Slider from '../../components/Home/Slider'
+import PetListByCategory from '../../components/Home/PetListByCategory'
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Colors from '../../constants/Colors'
+import { Link } from 'expo-router'
 
 export default function Home() {
     return (
@@ -16,18 +19,15 @@ export default function Home() {
             <Header />
             <Slider />
             <PetListByCategory />
-            <TouchableOpacity style={styles.addNewPetContainer}>
+            <Link href={'/add-new-pet'}
+                  style={styles.addNewPetContainer}>
                 <MaterialIcons name="pets" size={24} color={Colors.PRIMARY} />
-                <Text
-                    style={{
-                        fontFamily: "roboto-medium",
-                        color: Colors.PRIMARY,
-                        fontSize: 18,
-                    }}
-                >
-                    Add New Pet
-                </Text>
-            </TouchableOpacity>
+                <Text style={{
+                    fontFamily:'roboto-medium',
+                    color:Colors.PRIMARY,
+                    fontSize:18
+                }}>Add New Pet</Text>
+            </Link>
         </View>
     );
 }

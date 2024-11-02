@@ -58,14 +58,14 @@ export default function PetListItem({ pet }) {
                 <Text
                     style={{
                         color: Colors.GRAY,
-                        fontFamily: "outfit",
+                        fontFamily: "roboto-medium",
                     }}
                 >
                     {pet?.breed}
                 </Text>
                 <Text
                     style={{
-                        fontFamily: "outfit",
+                        fontFamily: "roboto-medium",
                         color: Colors.PRIMARY,
                         paddingHorizontal: 7,
                         borderRadius: 10,
