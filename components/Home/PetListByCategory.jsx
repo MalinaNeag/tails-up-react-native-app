@@ -1,9 +1,9 @@
-import { View, Text, FlatList } from "react-native";
-import React, { useEffect, useState } from "react";
-import Category from "./Category";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../../config/FirebaseConfig";
-import PetListItem from "./PetListItem";
+import { View, Text, FlatList } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import Category from './Category'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '../../config/FirebaseConfig'
+import PetListItem from './PetListItem'
 
 export default function PetListByCategory() {
     const [petList, setPetList] = useState([]);

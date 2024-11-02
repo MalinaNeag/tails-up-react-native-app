@@ -1,7 +1,7 @@
-import { View, Text, FlatList } from "react-native";
-import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "./../../config/FirebaseConfig";
+import { View, Text, FlatList, Image, StyleSheet, Dimensions } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { collection, getDocs } from 'firebase/firestore'
+import {db} from './../../config/FirebaseConfig'
 
 export default function Slider() {
     const [sliderList, setSliderList] = useState([]);
@@ -20,26 +20,21 @@ export default function Slider() {
     };
 
     return (
-        <View>
-            <View
-                style={{
-                    marginTop: 15,
-                }}
-            >
-                <FlatList
-                    data={sliderList}
-                    horizontal={true}
-                    showsHorizontalScrollIndicator={false}
-                    renderItem={({ item, index }) => (
-                        <View>
-                            <Image
-                                source={{ uri: item?.imageUrl }}
-                                style={styles?.sliderImage}
-                            />
-                        </View>
-                    )}
-                />
-            </View>
+        <View style={{
+            marginTop:15
+        }}>
+            <FlatList
+                data={sliderList}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                renderItem={({item,index})=>(
+                    <View>
+                        <Image source={{uri:item?.imageUrl}}
+                               style={styles?.sliderImage}
+                        />
+                    </View>
+                )}
+            />
         </View>
     );
 }

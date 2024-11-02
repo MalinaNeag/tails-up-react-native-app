@@ -1,9 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import React from "react";
-import Header from "../../components/Home/Header";
-import Slider from "../../components/Home/Slider";
-import PetListByCategory from "../../components/Home/PetListByCategory";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import React from 'react'
+import { useAuth } from '@clerk/clerk-expo'
+import Header from '../../components/Home/Header'
+import Slider from '../../components/Home/Slider'
+import PetListByCategory from '../../components/Home/PetListByCategory'
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Colors from '../../constants/Colors'
+import { Link } from 'expo-router'
 
 export default function Home() {
     return (

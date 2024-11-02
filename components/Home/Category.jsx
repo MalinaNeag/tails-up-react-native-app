@@ -1,15 +1,9 @@
-import {
-    View,
-    Text,
-    FlatList,
-    Image,
-    StyleSheet,
-    TouchableOpacity,
-} from "react-native";
-import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "./../../config/FirebaseConfig";
-import Colors from "./../../constants/Colors";
+import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { collection, getDocs } from 'firebase/firestore'
+import {db} from './../../config/FirebaseConfig'
+import Colors from './../../constants/Colors'
+
 export default function Category({ category }) {
     const [categoryList, setCategortList] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("Dogs");
