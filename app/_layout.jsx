@@ -39,7 +39,6 @@ export default function RootLayout() {
         "roboto-medium": require("./../assets/fonts/Roboto-Medium.ttf"),
     });
 
-
     return (
         <ClerkProvider
             tokenCache={tokenCache}
