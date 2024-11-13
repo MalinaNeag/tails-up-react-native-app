@@ -1,4 +1,4 @@
-import { View, Text, Image, TextInput, StyleSheet, TouchableOpacity, Pressable, ToastAndroid, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, Image, TextInput, StyleSheet, TouchableOpacity, Pressable, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useNavigation, useRouter } from 'expo-router';
 import Colors from './../../constants/Colors';
@@ -11,36 +11,51 @@ import { useUser } from '@clerk/clerk-expo';
 
 export default function AddNewPet() {
     const navigation = useNavigation();
-    const [formData, setFormData] = useState({ category: 'Dogs', sex: 'Male' });
-    const [gender, setGender] = useState();
-    const [categoryList, setCategortList] = useState([]);
-    const [selectedCategory, setSelectedategory] = useState();
-    const [image, setImage] = useState();
-    const [loader, setLoader] = useState(false);
-    const { user } = useUser();
     const router = useRouter();
+    const { user } = useUser();
+
+    const [formData, setFormData] = useState({ category: 'Dogs', sex: 'Male' });
+    const [categoryList, setCategoryList] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('Dogs');
+    const [gender, setGender] = useState('Male');
+    const [image, setImage] = useState(null);
+    const [loader, setLoader] = useState(false);
+    const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+
+    const showToast = (message) => {
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(message, ToastAndroid.SHORT);
+        } else {
+            Alert.alert(message);
+        }
+    };
 
     useEffect(() => {
         navigation.setOptions({ headerTitle: 'Add New Pet' });
-        GetCategories();
+        getCategories();
     }, []);
 
-    const GetCategories = async () => {
-        setCategortList([]);
-        const snapshot = await getDocs(collection(db, 'Category'));
-        snapshot.forEach((doc) => {
-            setCategortList(categoryList => [...categoryList, doc.data()]);
-        });
+    const getCategories = async () => {
+        setIsCategoryLoading(true);
+        try {
+            const snapshot = await getDocs(collection(db, 'Category'));
+            const categories = snapshot.docs.map(doc => doc.data());
+            setCategoryList(categories);
+        } catch (error) {
+            console.error("Failed to fetch categories:", error);
+            showToast("Failed to load categories");
+        } finally {
+            setIsCategoryLoading(false);
+        }
     };
 
     const imagePicker = async () => {
-        let result = await ImagePicker.launchImageLibraryAsync({
+        const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [4, 3],
             quality: 1,
         });
-
         if (!result.canceled) {
             setImage(result.assets[0].uri);
         }
@@ -50,39 +65,61 @@ export default function AddNewPet() {
         setFormData(prev => ({ ...prev, [fieldName]: fieldValue }));
     };
 
+    const validateForm = () => {
+        const requiredFields = ["name", "category", "breed", "age", "sex", "weight", "address", "about"];
+        for (const field of requiredFields) {
+            if (!formData[field]) return false;
+        }
+        return true;
+    };
+
     const onSubmit = () => {
-        if (Object.keys(formData).length !== 8) {
-            ToastAndroid.show('Enter All Details', ToastAndroid.SHORT);
+        if (!validateForm()) {
+            showToast('Enter All Details');
             return;
         }
-        UploadImage();
+        uploadImage();
     };
 
-    const UploadImage = async () => {
-        setLoader(true);
-        const resp = await fetch(image);
-        const blobImage = await resp.blob();
-        const storageRef = ref(storage, Date.now() + '.jpg');
+    const uploadImage = async () => {
+        if (!image) {
+            showToast("Please select an image");
+            return;
+        }
 
-        uploadBytes(storageRef, blobImage).then((snapshot) => {
-            getDownloadURL(storageRef).then(async (downloadUrl) => {
-                SaveFormData(downloadUrl);
-            });
-        });
+        try {
+            setLoader(true);
+            const response = await fetch(image);
+            const blobImage = await response.blob();
+            const storageRef = ref(storage, `pets/${Date.now()}.jpg`);
+
+            await uploadBytes(storageRef, blobImage);
+            const downloadUrl = await getDownloadURL(storageRef);
+            await saveFormData(downloadUrl);
+        } catch (error) {
+            console.error("Image upload error:", error);
+            showToast("Failed to upload image");
+        } finally {
+            setLoader(false);
+        }
     };
 
-    const SaveFormData = async (imageUrl) => {
+    const saveFormData = async (imageUrl) => {
         const docId = Date.now().toString();
-        await setDoc(doc(db, 'Pets', docId), {
-            ...formData,
-            imageUrl: imageUrl,
-            username: user?.fullName,
-            email: user?.primaryEmailAddress?.emailAddress,
-            userImage: user?.imageUrl,
-            id: docId
-        });
-        setLoader(false);
-        router.replace('/(tabs)/home');
+        try {
+            await setDoc(doc(db, 'Pets', docId), {
+                ...formData,
+                imageUrl,
+                username: user?.fullName,
+                email: user?.primaryEmailAddress?.emailAddress,
+                userImage: user?.imageUrl,
+                id: docId
+            });
+            router.replace('/(tabs)/home');
+        } catch (error) {
+            console.error("Failed to save form data:", error);
+            showToast("Failed to save pet information");
+        }
     };
 
     return (
@@ -92,9 +129,7 @@ export default function AddNewPet() {
             keyboardVerticalOffset={100}
         >
             <ScrollView style={{ padding: 20 }}>
-                <Text style={{ fontFamily: 'roboto-medium', fontSize: 20 }}>
-                    Add New Pet
-                </Text>
+                <Text style={{ fontFamily: 'roboto-medium', fontSize: 20 }}>Add New Pet</Text>
 
                 <Pressable onPress={imagePicker}>
                     {!image ? (
@@ -119,7 +154,7 @@ export default function AddNewPet() {
                         selectedValue={selectedCategory}
                         style={styles.input}
                         onValueChange={(itemValue) => {
-                            setSelectedategory(itemValue);
+                            setSelectedCategory(itemValue);
                             handleInputChange('category', itemValue);
                         }}
                     >
@@ -180,24 +215,8 @@ export default function AddNewPet() {
 }
 
 const styles = StyleSheet.create({
-    inputContainer: {
-        marginVertical: 5
-    },
-    input: {
-        padding: 10,
-        backgroundColor: Colors.WHITE,
-        borderRadius: 7,
-        fontFamily: 'roboto'
-    },
-    label: {
-        marginVertical: 5,
-        fontFamily: 'roboto'
-    },
-    button: {
-        padding: 15,
-        backgroundColor: Colors.PRIMARY,
-        borderRadius: 7,
-        marginVertical: 10,
-        marginBottom: 50
-    }
+    inputContainer: { marginVertical: 5 },
+    input: { padding: 10, backgroundColor: Colors.WHITE, borderRadius: 7, fontFamily: 'roboto' },
+    label: { marginVertical: 5, fontFamily: 'roboto' },
+    button: { padding: 15, backgroundColor: Colors.PRIMARY, borderRadius: 7, marginVertical: 10, marginBottom: 50 }
 });
