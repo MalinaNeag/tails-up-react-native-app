@@ -19,18 +19,15 @@ export default function Home() {
             <Header />
             <Slider />
             <PetListByCategory />
-            <TouchableOpacity style={styles.addNewPetContainer}>
+            <Link href={'/add-new-pet'}
+                  style={styles.addNewPetContainer}>
                 <MaterialIcons name="pets" size={24} color={Colors.PRIMARY} />
-                <Text
-                    style={{
-                        fontFamily: "roboto-medium",
-                        color: Colors.PRIMARY,
-                        fontSize: 18,
-                    }}
-                >
-                    Add New Pet
-                </Text>
-            </TouchableOpacity>
+                <Text style={{
+                    fontFamily:'roboto-medium',
+                    color:Colors.PRIMARY,
+                    fontSize:18
+                }}>Add New Pet</Text>
+            </Link>
         </View>
     );
 }
