@@ -73,7 +73,7 @@ export default function PetListItem({ pet }) {
                         backgroundColor: Colors.LIGHT_PRIMARY,
                     }}
                 >
-                    {pet.age} YRS
+                    {pet?.age} YRS
                 </Text>
             </View>
         </TouchableOpacity>
