@@ -5,6 +5,7 @@ import {
     Image,
     StyleSheet,
     TouchableOpacity,
+    Dimensions,
 } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
 import { collection, getDocs } from "firebase/firestore";
@@ -15,6 +16,8 @@ export default function Category({ category }) {
     const [categoryList, setCategoryList] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("Dogs");
     const listRef = useRef(null);
+    const screenWidth = Dimensions.get("window").width;
+    const itemWidth = screenWidth / 3; // Adjust this for visible items
 
     useEffect(() => {
         GetCategories();
@@ -45,7 +48,6 @@ export default function Category({ category }) {
 
     const handleScrollEnd = (event) => {
         const { contentOffset, layoutMeasurement } = event.nativeEvent;
-        const itemWidth = layoutMeasurement.width / 3; // Adjust based on visible items
         const index = Math.round(contentOffset.x / itemWidth);
 
         if (index === 0) {
@@ -84,7 +86,21 @@ export default function Category({ category }) {
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(item, index) => index.toString()}
+                getItemLayout={(data, index) => ({
+                    length: itemWidth,
+                    offset: itemWidth * index,
+                    index,
+                })}
                 onMomentumScrollEnd={handleScrollEnd}
+                onScrollToIndexFailed={(info) => {
+                    console.warn("Scroll to index failed:", info);
+                    setTimeout(() => {
+                        listRef.current?.scrollToIndex({
+                            index: info.index,
+                            animated: true,
+                        });
+                    }, 500);
+                }}
                 renderItem={({ item }) => (
                     <TouchableOpacity
                         onPress={() => {
@@ -114,19 +130,21 @@ export default function Category({ category }) {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: Colors.LIGHT_PRIMARY,
-        padding: 15,
+        //backgroundColor: Colors.LIGHT_PRIMARY,
+        padding: 10,
         alignItems: "center",
-        borderRadius: 15,
-        marginHorizontal: 5,
+        //borderRadius: 55,
+        marginHorizontal: 2,
+        marginVertical: 4,
     },
     selectedCategoryContainer: {
-        backgroundColor: Colors.SECONDARY,
-        borderColor: Colors.SECONDARY,
+        backgroundColor: Colors.LIGHT_PRIMARY,
+        borderColor: Colors.LIGHT_PRIMARY,
+        borderRadius: 15,
     },
     image: {
-        width: 40,
-        height: 40,
+        width: 60,
+        height: 60,
     },
     text: {
         textAlign: "center",
