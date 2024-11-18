@@ -5,25 +5,64 @@ import {
     Image,
     StyleSheet,
     TouchableOpacity,
+    Dimensions,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "./../../config/FirebaseConfig";
 import Colors from "./../../constants/Colors";
 
 export default function Category({ category }) {
-    const [categoryList, setCategortList] = useState([]);
+    const [categoryList, setCategoryList] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("Dogs");
+    const listRef = useRef(null);
+    const screenWidth = Dimensions.get("window").width;
+    const itemWidth = screenWidth / 3; // Adjust this for visible items
+
     useEffect(() => {
         GetCategories();
     }, []);
 
     const GetCategories = async () => {
-        setCategortList([]);
         const snapshot = await getDocs(collection(db, "Category"));
+        const fetchedCategories = [];
         snapshot.forEach((doc) => {
-            setCategortList((categoryList) => [...categoryList, doc.data()]);
+            fetchedCategories.push(doc.data());
         });
+
+        // Duplicate data to simulate circular scrolling
+        setCategoryList([
+            ...fetchedCategories,
+            ...fetchedCategories,
+            ...fetchedCategories,
+        ]);
+
+        // Set scroll position to the middle dataset
+        setTimeout(() => {
+            listRef.current?.scrollToIndex({
+                index: fetchedCategories.length,
+                animated: false,
+            });
+        }, 100);
+    };
+
+    const handleScrollEnd = (event) => {
+        const { contentOffset, layoutMeasurement } = event.nativeEvent;
+        const index = Math.round(contentOffset.x / itemWidth);
+
+        if (index === 0) {
+            // Scroll to the last duplicated section
+            listRef.current?.scrollToIndex({
+                index: categoryList.length / 3,
+                animated: false,
+            });
+        } else if (index === categoryList.length - 1) {
+            // Scroll to the first duplicated section
+            listRef.current?.scrollToIndex({
+                index: categoryList.length / 3 - 1,
+                animated: false,
+            });
+        }
     };
 
     return (
@@ -42,41 +81,46 @@ export default function Category({ category }) {
             </Text>
 
             <FlatList
+                ref={listRef}
                 data={categoryList}
-                numColumns={4}
-                renderItem={({ item, index }) => (
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item, index) => index.toString()}
+                getItemLayout={(data, index) => ({
+                    length: itemWidth,
+                    offset: itemWidth * index,
+                    index,
+                })}
+                onMomentumScrollEnd={handleScrollEnd}
+                onScrollToIndexFailed={(info) => {
+                    console.warn("Scroll to index failed:", info);
+                    setTimeout(() => {
+                        listRef.current?.scrollToIndex({
+                            index: info.index,
+                            animated: true,
+                        });
+                    }, 500);
+                }}
+                renderItem={({ item }) => (
                     <TouchableOpacity
                         onPress={() => {
                             setSelectedCategory(item.name);
                             category(item.name);
                         }}
-                        style={{
-                            flex: 1,
-                        }}
                     >
                         <View
                             style={[
-                                styles.conatiner,
-                                selectedCategory == item.name &&
+                                styles.container,
+                                selectedCategory === item.name &&
                                     styles.selectedCategoryContainer,
                             ]}
                         >
                             <Image
                                 source={{ uri: item?.imageUrl }}
-                                style={{
-                                    width: 40,
-                                    height: 40,
-                                }}
+                                style={styles.image}
                             />
                         </View>
-                        <Text
-                            style={{
-                                textAlign: "center",
-                                fontFamily: "roboto-light",
-                            }}
-                        >
-                            {item?.name}
-                        </Text>
+                        <Text style={styles.text}>{item?.name}</Text>
                     </TouchableOpacity>
                 )}
             />
@@ -85,17 +129,25 @@ export default function Category({ category }) {
 }
 
 const styles = StyleSheet.create({
-    conatiner: {
-        backgroundColor: Colors.LIGHT_PRIMARY,
-        padding: 15,
+    container: {
+        //backgroundColor: Colors.LIGHT_PRIMARY,
+        padding: 10,
         alignItems: "center",
-        borderWidth: 1,
-        borderRadius: 15,
-        borderColor: Colors.PRIMARY,
-        margin: 5,
+        //borderRadius: 55,
+        marginHorizontal: 2,
+        marginVertical: 4,
     },
     selectedCategoryContainer: {
-        backgroundColor: Colors.SECONDARY,
-        borderColor: Colors.SECONDARY,
+        backgroundColor: Colors.LIGHT_PRIMARY,
+        borderColor: Colors.LIGHT_PRIMARY,
+        borderRadius: 15,
+    },
+    image: {
+        width: 60,
+        height: 60,
+    },
+    text: {
+        textAlign: "center",
+        fontFamily: "roboto-light",
     },
 });

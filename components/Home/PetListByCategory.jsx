@@ -22,7 +22,10 @@ export default function PetListByCategory() {
         const querySnapshot = await getDocs(q);
 
         querySnapshot.forEach((doc) => {
-            setPetList((petList) => [...petList, doc.data()]);
+            setPetList((petList) => [
+                ...petList,
+                { id: doc.id, ...doc.data() },
+            ]);
         });
         setLoader(false);
     };

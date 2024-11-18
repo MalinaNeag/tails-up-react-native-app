@@ -28,6 +28,7 @@ export default{
   PRIMARY:'#FFA800',
   GRAY:'#8F8e8d',
   WHITE:'#fff',
-  SECONDARY:'#4faaff',
+  //SECONDARY:'#4faaff',
+  SECONDARY: '#FB306F',
   LIGHT_PRIMARY:'#fff1c9'
 }
