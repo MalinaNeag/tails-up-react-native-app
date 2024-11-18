@@ -5,11 +5,13 @@ import { useUser } from "@clerk/clerk-expo";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
 import PetListItem from "./../../components/Home/PetListItem";
+
 export default function Favorite() {
     const { user } = useUser();
     const [favIds, setFavIds] = useState([]);
     const [favPetList, setFavPetList] = useState([]);
     const [loader, setLoader] = useState(false);
+
     useEffect(() => {
         user && GetFavPetIds();
     }, [user]);
@@ -17,38 +19,43 @@ export default function Favorite() {
     const GetFavPetIds = async () => {
         setLoader(true);
         const result = await Shared.GetFavList(user);
-        setFavIds(result?.favorites);
-        setLoader(false);
+        const favorites = result?.favorites || [];
+        setFavIds(favorites);
 
-        GetFavPetList(result?.favorites);
+        if (favorites.length > 0) {
+            await GetFavPetList(favorites);
+        } else {
+            setFavPetList([]); // Clear the list if no favorites
+        }
+
+        setLoader(false);
     };
 
     const GetFavPetList = async (favId_) => {
+        if (!favId_ || favId_.length === 0) {
+            setFavPetList([]);
+            setLoader(false);
+            return;
+        }
+
         setLoader(true);
-        setFavPetList([]);
-        const q = query(collection(db, "Pets"), where("id", "in", favId_));
+        const q = query(
+            collection(db, "Pets"),
+            where("__name__", "in", favId_)
+        );
         const querySnapshot = await getDocs(q);
 
-        querySnapshot.forEach((doc) => {
-            console.log(doc.data());
-            setFavPetList((prev) => [...prev, doc.data()]);
-        });
+        const pets = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        setFavPetList(pets);
         setLoader(false);
     };
 
     return (
-        <View
-            style={{
-                padding: 20,
-                marginTop: 20,
-            }}
-        >
-            <Text
-                style={{
-                    fontFamily: "roboto-medium",
-                    fontSize: 30,
-                }}
-            >
+        <View style={{ padding: 20, marginTop: 20 }}>
+            <Text style={{ fontFamily: "roboto-medium", fontSize: 30 }}>
                 Favorites
             </Text>
 
@@ -57,6 +64,7 @@ export default function Favorite() {
                 numColumns={2}
                 onRefresh={GetFavPetIds}
                 refreshing={loader}
+                keyExtractor={(item) => item.id}
                 renderItem={({ item, index }) => (
                     <View style={{ margin: 5 }}>
                         <PetListItem pet={item} />
