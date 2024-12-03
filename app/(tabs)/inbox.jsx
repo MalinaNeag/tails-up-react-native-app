@@ -56,9 +56,11 @@ export default function Inbox() {
 
                 const lastMessage = lastMessageSnapshot.docs[0]?.data() || null;
 
+                console.log("{}", lastMessage?.text);
+
                 return {
                     docId: doc.id,
-                    lastMessage: lastMessage?.text || "",
+                    lastMessage: lastMessage?.text || "", //"nimic",
                     lastMessageTime: lastMessage?.createdAt
                         ? moment(
                               lastMessage.createdAt,
