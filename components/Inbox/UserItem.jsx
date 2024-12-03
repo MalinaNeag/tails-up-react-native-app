@@ -1,56 +1,74 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 import React from "react";
 import Colors from "./../../constants/Colors";
-import { Link } from "expo-router";
-import moment from "moment";
+import { useRouter } from "expo-router";
 
 export default function UserItem({ userInfo }) {
+    const router = useRouter();
+
     return (
-        <Link href={`/chat?id=${userInfo.docId}`}>
-            <View
+        <TouchableOpacity
+            onPress={() => router.push(`/chat?id=${userInfo.docId}`)}
+            style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: 10,
+                paddingHorizontal: 15,
+                backgroundColor: Colors.WHITE,
+                borderBottomWidth: 0.5,
+                borderBottomColor: Colors.GRAY,
+            }}
+        >
+            {/* Avatar */}
+            <Image
+                source={{ uri: userInfo?.imageUrl }}
                 style={{
-                    marginVertical: 7,
-                    display: "flex",
-                    flexDirection: "row",
-                    gap: 10,
-                    alignItems: "center",
-                }}
-            >
-                <Image
-                    source={{ uri: userInfo?.imageUrl }}
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 99,
-                    }}
-                />
-                <View>
-                    <Text
-                        style={{
-                            fontFamily: "roboto-medium",
-                            fontSize: 20,
-                        }}
-                    >
-                        {userInfo?.name}
-                    </Text>
-                    <Text
-                        style={{
-                            fontFamily: "roboto-light",
-                            fontSize: 14,
-                            color: Colors.GRAY,
-                        }}
-                    >
-                        {userInfo?.lastMessageTime}
-                    </Text>
-                </View>
-            </View>
-            <View
-                style={{
-                    borderWidth: 0.2,
-                    marginVertical: 7,
-                    borderColor: Colors.GRAY,
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    marginRight: 15,
                 }}
             />
-        </Link>
+
+            {/* Chat Details */}
+            <View style={{ flex: 1 }}>
+                {/* User Name */}
+                <Text
+                    style={{
+                        fontFamily: "roboto-medium",
+                        fontSize: 16,
+                        marginBottom: 2,
+                    }}
+                >
+                    {userInfo?.name}
+                </Text>
+
+                {/* Last Message */}
+                <Text
+                    style={{
+                        fontFamily: "roboto-light",
+                        fontSize: 14,
+                        color: Colors.GRAY,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                    }}
+                    numberOfLines={1}
+                >
+                    {userInfo?.lastMessage}
+                </Text>
+            </View>
+
+            {/* Timestamp */}
+            <Text
+                style={{
+                    fontFamily: "roboto-light",
+                    fontSize: 12,
+                    color: Colors.GRAY,
+                }}
+            >
+                {userInfo?.lastMessageTime}
+            </Text>
+        </TouchableOpacity>
     );
 }

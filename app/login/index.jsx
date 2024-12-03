@@ -56,7 +56,7 @@ export default function LoginScreen() {
             if (createdSessionId) {
                 console.log("session created :)))");
             } else {
-                console.log("session not created :((((((");
+                console.log("session not created :(((");
             }
         } catch (err) {
             console.error("OAuth error", err);

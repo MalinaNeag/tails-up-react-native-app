@@ -22,8 +22,6 @@ export default function Inbox() {
         user && GetUserList();
     }, [user]);
 
-    // Fetch chats for the current user and include the last message
-
     const GetUserList = async () => {
         setLoader(true);
         setUserList([]);
@@ -56,16 +54,11 @@ export default function Inbox() {
 
                 const lastMessage = lastMessageSnapshot.docs[0]?.data() || null;
 
-                console.log("{}", lastMessage?.text);
-
                 return {
                     docId: doc.id,
-                    lastMessage: lastMessage?.text || "", //"nimic",
+                    lastMessage: lastMessage?.text || "",
                     lastMessageTime: lastMessage?.createdAt
-                        ? moment(
-                              lastMessage.createdAt,
-                              "MM-DD-YYYY HH:mm:ss"
-                          ).fromNow() // Parse and calculate relative time
+                        ? moment(lastMessage.createdAt.toDate()).fromNow() // Properly convert Firebase Timestamp to Date
                         : "",
                     ...chatData,
                 };
@@ -76,7 +69,6 @@ export default function Inbox() {
         setLoader(false);
     };
 
-    // Map user data to include chat info
     const MapOtherUserList = () => {
         return userList.map((record) => {
             const otherUser = record.users?.filter(
