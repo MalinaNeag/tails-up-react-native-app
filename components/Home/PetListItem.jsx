@@ -3,8 +3,13 @@ import React from "react";
 import Colors from "../../constants/Colors";
 import { useRouter } from "expo-router";
 import MarkFav from "./../../components/MarkFav";
+
 export default function PetListItem({ pet }) {
     const router = useRouter();
+
+    // Debug log for the pet.imageUrl
+    //console.log("PetListItem - pet.imageUrl:", pet?.imageUrl);
+
     return (
         <TouchableOpacity
             onPress={() =>
@@ -38,6 +43,12 @@ export default function PetListItem({ pet }) {
                     objectFit: "cover",
                     borderRadius: 10,
                 }}
+                onError={(error) =>
+                    console.log(
+                        "PetListItem - Image failed to load:",
+                        error.nativeEvent.error
+                    )
+                }
             />
             <Text
                 style={{

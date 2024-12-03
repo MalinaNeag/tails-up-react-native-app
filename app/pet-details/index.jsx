@@ -28,12 +28,17 @@ export default function PetDetails() {
     const navigation = useNavigation();
     const { user } = useUser();
     const router = useRouter();
+
     useEffect(() => {
         navigation.setOptions({
             headerTransparent: true,
             headerTitle: "",
         });
-    }, []);
+
+        // Debug message for the pet object
+        //console.log("Pet data:", pet?.id);
+        //console.log("Pet imageUrl:", pet?.imageUrl);
+    }, [pet]);
 
     /**
      * Used to Initiate the chat between two users
@@ -74,15 +79,22 @@ export default function PetDetails() {
                 ],
                 userIds: [user?.primaryEmailAddress?.emailAddress, pet?.email],
             });
+
+            // Debug message for the new chat document
+            console.log("New chat document created with id:", docId1);
+
             router.push({
                 pathname: "/chat",
                 params: { id: docId1 },
             });
         }
     };
+
     return (
         <View>
             <ScrollView>
+                {/* Debug message for rendering components */}
+                {console.log("Rendering PetInfo with pet:", pet)}
                 {/* Pet Info  */}
                 <PetInfo pet={pet} />
                 {/* Pet SubInfo  */}
