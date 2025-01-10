@@ -1,46 +1,33 @@
 import { useUser } from "@clerk/clerk-expo";
-import {
-    Link,
-    Redirect,
-    useNavigation,
-    useRootNavigationState,
-    useRouter,
-} from "expo-router";
+import { useRouter } from "expo-router";
 import { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 
 export default function Index() {
-    const { user } = useUser();
+    const { user, isSignedIn } = useUser();
+    const router = useRouter();
 
-    const rootNavigationState = useRootNavigationState();
-    const navigation = useNavigation();
     useEffect(() => {
-        if (user && CheckNavLoaded()) {
-            navigation.navigate("/(tabs)/home");
-        } else if (!user && CheckNavLoaded()) {
-            navigation.navigate("/login");
+        if (isSignedIn !== undefined) {
+            if (isSignedIn) {
+                console.log("[Auth] User is signed in. Navigating to home...");
+                router.replace("/(tabs)/home");
+            } else {
+                console.log("[Auth] User is not signed in. Navigating to login...");
+                router.replace("/login");
+            }
         }
-    }, [user, rootNavigationState.key]);
-
-    const CheckNavLoaded = () => {
-        if (!rootNavigationState.key) {
-            console.warn("Navigation state not yet loaded");
-            return false;
-        }
-        return true;
-    };
+    }, [isSignedIn, router]);
 
     return (
         <View
             style={{
                 flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
             }}
         >
-            {user ? (
-                <Redirect href={"/(tabs)/home"} />
-            ) : (
-                <Redirect href={"/login"} />
-            )}
+            <ActivityIndicator size="large" />
         </View>
     );
 }

@@ -1,0 +1,432 @@
+import React, { useCallback, useState, useRef } from "react";
+import {
+    View,
+    Text,
+    Image,
+    Pressable,
+    StyleSheet,
+    Animated,
+    ActivityIndicator,
+    Alert,
+} from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { useOAuth } from "@clerk/clerk-expo";
+import * as Linking from "expo-linking";
+import Colors from "../../constants/Colors";
+
+export const useWarmUpBrowser = () => {
+    React.useEffect(() => {
+        void WebBrowser.warmUpAsync();
+        return () => {
+            void WebBrowser.coolDownAsync();
+        };
+    }, []);
+};
+
+WebBrowser.maybeCompleteAuthSession();
+
+export default function LoginScreen() {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.9,
+            friction: 6,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 6,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    useWarmUpBrowser();
+    const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+    const onPress = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            console.log("[OAuth]    Starting OAuth flow...");
+            const { createdSessionId } = await startOAuthFlow({
+                redirectUrl: Linking.createURL("/(tabs)/home", {
+                    scheme: "myapp",
+                }),
+            });
+
+            if (createdSessionId) {
+                console.log("[OAuth] Session created successfully!");
+                Alert.alert("Success", "You are now logged in.");
+            } else {
+                console.warn("[OAuth] Session not created. Please try again.");
+                Alert.alert("Login Failed", "Session could not be created.");
+            }
+        } catch (err) {
+            if (err.message.includes("single session mode")) {
+                console.error("[OAuth] Single session mode detected.");
+                Alert.alert(
+                    "Session Error",
+                    "You're already logged in to another account. Please sign out first."
+                );
+            } else {
+                console.error("[OAuth] Error during OAuth flow:", err.message);
+                Alert.alert("Error", "An unexpected error occurred. Please try again.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }, [startOAuthFlow]);
+
+    return (
+        <View style={styles.container}>
+            <Image
+                source={require("../../assets/images/logot.png")}
+                style={styles.image}
+            />
+
+            <View style={styles.textContainer}>
+                <Text style={styles.title}>TailsUp</Text>
+                <Text style={styles.subtitle}>
+                    Always Connected to Your Pets
+                </Text>
+                <Text style={styles.description}>
+                    Find trusted, verified sitters near you in just a few taps.
+                    Whether you need someone for a quick walk, weekend boarding,
+                    or daily visits, TailsUp connects you with sitters you can
+                    rely on.
+                </Text>
+            </View>
+
+            {/* Get Started Button */}
+            <Pressable
+                onPress={onPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                style={({ pressed }) => [
+                    styles.getStartedButton,
+                    pressed && styles.buttonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Get Started with TailsUp"
+            >
+                {isLoading ? (
+                    <ActivityIndicator color={Colors.WHITE} />
+                ) : (
+                    <Text style={styles.buttonText}>Get Started</Text>
+                )}
+            </Pressable>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        paddingTop: 20,
+        flex: 1,
+        backgroundColor: Colors.WHITE,
+    },
+    image: {
+        width: "100%",
+        height: 300,
+    },
+    textContainer: {
+        paddingHorizontal: 20,
+        alignItems: "center",
+    },
+    title: {
+        fontFamily: "roboto-bold",
+        fontSize: 60,
+        textAlign: "center",
+    },
+    subtitle: {
+        fontFamily: "roboto-medium-italic",
+        fontSize: 26,
+        textAlign: "center",
+    },
+    description: {
+        fontFamily: "roboto",
+        fontSize: 16,
+        textAlign: "center",
+        color: Colors.GRAY,
+        paddingTop: 10,
+        paddingHorizontal: 15,
+    },
+    getStartedButton: {
+        position: "absolute",
+        bottom: 0,
+        alignSelf: "center",
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        backgroundColor: Colors.PRIMARY,
+        width: "100%",
+    },
+    buttonPressed: {
+        transform: [{ scale: 0.98 }], // Slight shrink effect
+        backgroundColor: Colors.DARK_PRIMARY,
+    },
+    buttonText: {
+        fontFamily: "roboto-medium",
+        fontSize: 20,
+        textAlign: "center",
+        color: Colors.WHITE,
+    },
+});
+
+
+
+-----
+import React, { useEffect, useState } from "react";
+import {
+    View,
+    Text,
+    Image,
+    TextInput,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    Pressable,
+    ToastAndroid,
+    ActivityIndicator,
+    Alert,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { db, storage } from "../../config/FirebaseConfig";
+import * as ImagePicker from "expo-image-picker";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { useUser } from "@clerk/clerk-expo";
+import Colors from "../../constants/Colors";
+
+export default function AddNewPet() {
+    const [formData, setFormData] = useState({
+        category: "Dogs",
+        sex: "Male",
+    });
+    const [categoryList, setCategoryList] = useState([]);
+    const [image, setImage] = useState(null);
+    const [loader, setLoader] = useState(false);
+    const { user } = useUser();
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const snapshot = await getDocs(collection(db, "Category"));
+            const categories = snapshot.docs.map((doc) => doc.data());
+            setCategoryList(categories);
+        } catch (err) {
+            console.error("[Fetch Categories] Error:", err);
+            Alert.alert("Error", "Failed to load categories. Please try again.");
+        }
+    };
+
+    const imagePicker = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 1,
+            });
+
+            if (!result.canceled) {
+                setImage(result.assets[0].uri);
+            } else {
+                console.warn("Image selection was canceled.");
+            }
+        } catch (err) {
+            console.error("[Image Picker] Error:", err);
+            Alert.alert("Error", "Failed to select image. Please try again.");
+        }
+    };
+
+    const handleInputChange = (fieldName, value) => {
+        setFormData((prev) => ({ ...prev, [fieldName]: value }));
+    };
+
+    const validateForm = () => {
+        const requiredFields = ["name", "category", "breed", "age", "sex", "weight", "address", "about"];
+        for (const field of requiredFields) {
+            if (!formData[field]) {
+                ToastAndroid.show(`Missing field: ${field}`, ToastAndroid.SHORT);
+                return false;
+            }
+        }
+
+        if (!image) {
+            ToastAndroid.show("Please select an image.", ToastAndroid.SHORT);
+            return false;
+        }
+
+        return true;
+    };
+
+    const onSubmit = async () => {
+        if (!validateForm()) return;
+
+        setLoader(true);
+        try {
+            const imageUrl = await uploadImage();
+            await savePetData(imageUrl);
+            ToastAndroid.show("Pet added successfully!", ToastAndroid.SHORT);
+        } catch (err) {
+            console.error("[Submit] Error:", err);
+            Alert.alert("Error", "Failed to add pet. Please try again.");
+        } finally {
+            setLoader(false);
+        }
+    };
+
+const uploadImage = async () => {
+    if (!image) {
+        console.error("[Upload Image] No image selected");
+        throw new Error("No image selected. Please choose an image.");
+    }
+
+    try {
+        console.log("[Upload Image] Fetching image...");
+        const response = await fetch(image);
+
+        if (!response.ok) {
+            console.error("[Upload Image] Image fetch failed:", response.status);
+            throw new Error("Failed to fetch image. Check the URI.");
+        }
+
+        const blob = await response.blob();
+        const storageRef = ref(storage, `pets/${Date.now()}.jpg`);
+
+        console.log("[Upload Image] Uploading image to Firebase...");
+        await uploadBytes(storageRef, blob);
+        console.log("[Upload Image] Upload successful!");
+
+        const downloadUrl = await getDownloadURL(storageRef);
+        console.log("[Upload Image] Download URL:", downloadUrl);
+
+        return downloadUrl;
+    } catch (error) {
+        console.error("[Upload Image] Firebase Storage Error:", error.message);
+        throw error;
+    }
+};
+
+    const savePetData = async (imageUrl) => {
+        const petId = Date.now().toString();
+        await setDoc(doc(db, "Pets", petId), {
+            ...formData,
+            imageUrl,
+            username: user?.fullName || "Anonymous",
+            email: user?.primaryEmailAddress?.emailAddress,
+            userImage: user?.imageUrl,
+            id: petId,
+        });
+    };
+
+    return (
+        <ScrollView style={{ padding: 20 }}>
+            <Text style={styles.title}>Add New Pet for Adoption</Text>
+
+            <Pressable onPress={imagePicker}>
+                <Image
+                    source={
+                        image
+                            ? { uri: image }
+                            : require("../../assets/images/placeholder.png")
+                    }
+                    style={styles.image}
+                />
+            </Pressable>
+
+            <View style={styles.inputContainer}>
+                <Text style={styles.label}>Pet Name *</Text>
+                <TextInput
+                    style={styles.input}
+                    onChangeText={(value) => handleInputChange("name", value)}
+                />
+            </View>
+
+            <View style={styles.inputContainer}>
+                <Text style={styles.label}>Pet Category *</Text>
+                <Picker
+                    selectedValue={formData.category}
+                    style={styles.input}
+                    onValueChange={(value) => handleInputChange("category", value)}
+                >
+                    {categoryList.map((category, index) => (
+                        <Picker.Item key={index} label={category.name} value={category.name} />
+                    ))}
+                </Picker>
+            </View>
+
+            {/* Additional Fields */}
+            {["breed", "age", "weight", "address", "about"].map((field) => (
+                <View style={styles.inputContainer} key={field}>
+                    <Text style={styles.label}>
+                        {field.charAt(0).toUpperCase() + field.slice(1)} *
+                    </Text>
+                    <TextInput
+                        style={styles.input}
+                        onChangeText={(value) => handleInputChange(field, value)}
+                    />
+                </View>
+            ))}
+
+            <TouchableOpacity
+                style={styles.button}
+                disabled={loader}
+                onPress={onSubmit}
+            >
+                {loader ? (
+                    <ActivityIndicator size="large" color={Colors.WHITE} />
+                ) : (
+                    <Text style={styles.buttonText}>Submit</Text>
+                )}
+            </TouchableOpacity>
+        </ScrollView>
+    );
+}
+
+const styles = StyleSheet.create({
+    title: {
+        fontFamily: "roboto-medium",
+        fontSize: 20,
+        marginBottom: 10,
+    },
+    image: {
+        width: 100,
+        height: 100,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: Colors.GRAY,
+        marginBottom: 10,
+    },
+    inputContainer: {
+        marginBottom: 10,
+    },
+    input: {
+        padding: 10,
+        backgroundColor: Colors.WHITE,
+        borderRadius: 7,
+        fontFamily: "roboto",
+    },
+    label: {
+        marginBottom: 5,
+        fontFamily: "roboto",
+    },
+    button: {
+        padding: 15,
+        backgroundColor: Colors.PRIMARY,
+        borderRadius: 7,
+        marginVertical: 20,
+    },
+    buttonText: {
+        fontFamily: "roboto-medium",
+        textAlign: "center",
+        color: Colors.WHITE,
+    },
+});

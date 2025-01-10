@@ -1,3 +1,4 @@
+import React, { useCallback, useState, useRef } from "react";
 import {
     View,
     Text,
@@ -5,13 +6,13 @@ import {
     Pressable,
     StyleSheet,
     Animated,
+    ActivityIndicator,
+    Alert,
 } from "react-native";
-import React, { useCallback } from "react";
-import { useRef } from "react";
-import Colors from "./../../constants/Colors";
 import * as WebBrowser from "expo-web-browser";
 import { useOAuth } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
+import Colors from "../../constants/Colors";
 
 export const useWarmUpBrowser = () => {
     React.useEffect(() => {
@@ -26,6 +27,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const [isLoading, setIsLoading] = useState(false);
 
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
@@ -42,11 +44,14 @@ export default function LoginScreen() {
             useNativeDriver: true,
         }).start();
     };
+
     useWarmUpBrowser();
     const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
 
     const onPress = useCallback(async () => {
+        setIsLoading(true);
         try {
+            console.log("[OAuth]    Starting OAuth flow...");
             const { createdSessionId } = await startOAuthFlow({
                 redirectUrl: Linking.createURL("/(tabs)/home", {
                     scheme: "myapp",
@@ -54,19 +59,32 @@ export default function LoginScreen() {
             });
 
             if (createdSessionId) {
-                console.log("session created :)))");
+                console.log("[OAuth] Session created successfully!");
+                Alert.alert("Success", "You are    now logged in.");
             } else {
-                console.log("session not created :(((");
+                console.warn("[OAuth] Session not created. Please try again.");
+                Alert.alert("Login Failed", "Session could not be created.");
             }
         } catch (err) {
-            console.error("OAuth error", err);
+            if (err.message.includes("single session mode")) {
+                console.error("[OAuth] Single session mode detected.");
+                Alert.alert(
+                    "Session Error",
+                    "You're already logged in to another account. Please sign out first."
+                );
+            } else {
+                console.error("[OAuth] Error during OAuth flow:", err.message);
+                Alert.alert("Error", "An unexpected error occurred. Please try again.");
+            }
+        } finally {
+            setIsLoading(false);
         }
-    }, []);
+    }, [startOAuthFlow]);
 
     return (
         <View style={styles.container}>
             <Image
-                source={require("./../../assets/images/logot.png")}
+                source={require("../../assets/images/logot.png")}
                 style={styles.image}
             />
 
@@ -92,8 +110,14 @@ export default function LoginScreen() {
                     styles.getStartedButton,
                     pressed && styles.buttonPressed,
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Get Started with TailsUp"
             >
-                <Text style={styles.buttonText}>Get Started</Text>
+                {isLoading ? (
+                    <ActivityIndicator color={Colors.WHITE} />
+                ) : (
+                    <Text style={styles.buttonText}>Get Started</Text>
+                )}
             </Pressable>
         </View>
     );
@@ -138,17 +162,11 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 20,
         backgroundColor: Colors.PRIMARY,
-        //borderRadius: 14,
         width: "100%",
-        //shadowColor: "#000",
-        //shadowOffset: { width: 0, height: 4 },
-        //shadowOpacity: 0.3,
-        //shadowRadius: 5,
-        //elevation: 6, // For Android shadow
     },
     buttonPressed: {
         transform: [{ scale: 0.98 }], // Slight shrink effect
-        backgroundColor: Colors.DARK_PRIMARY, // Optional darker shade
+        backgroundColor: Colors.DARK_PRIMARY,
     },
     buttonText: {
         fontFamily: "roboto-medium",

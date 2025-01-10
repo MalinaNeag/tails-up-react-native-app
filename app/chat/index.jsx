@@ -1,4 +1,11 @@
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import {
+    View,
+    Text,
+    ActivityIndicator,
+    StyleSheet,
+    TouchableOpacity,
+    Linking,
+} from "react-native";
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import {
@@ -64,7 +71,14 @@ export default function ChatScreen() {
 
         navigation.setOptions({
             headerTitle: otherUser?.[0]?.name || "Chat",
-            headerSubtitle: moment().format("MMMM DD, YYYY"), // Display in readable format
+            headerRight: () => (
+                <TouchableOpacity
+                    onPress={sendAgreement}
+                    style={styles.headerButton}
+                >
+                    <Text style={styles.headerButtonText}>Hosting Request</Text>
+                </TouchableOpacity>
+            ),
         });
     };
 
@@ -90,6 +104,48 @@ export default function ChatScreen() {
             console.error("Error sending message:", error);
         }
     };
+
+    const sendAgreement = async () => {
+        try {
+            const stripeUrl = await createStripeSession(5000); // Example amount: $50.00
+
+            const agreementMessage = {
+                _id: Date.now().toString(),
+                text: "Please accept the hosting request by clicking the button below.",
+                type: "agreement",
+                createdAt: Timestamp.now(),
+                sender: user?.primaryEmailAddress?.emailAddress,
+                status: "pending",
+                stripeUrl,
+            };
+
+            await addDoc(collection(db, "Chat", params.id, "Messages"), agreementMessage);
+        } catch (error) {
+            console.error("Error sending agreement:", error);
+        }
+    };
+
+const createStripeSession = async (amount) => {
+    try {
+        const response = await fetch("https://your-backend-url/create-checkout-session", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ amount }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const { url } = await response.json();
+        return url; // Stripe Checkout URL
+    } catch (error) {
+        console.error("Error creating Stripe session:", error);
+        throw error;
+    }
+};
 
     const renderBubble = (props) => {
         const isSending = props.currentMessage.sending;
@@ -117,6 +173,28 @@ export default function ChatScreen() {
         );
     };
 
+
+
+    const renderCustomView = (props) => {
+        const { currentMessage } = props;
+
+        if (currentMessage.type === "agreement") {
+            return (
+                <View style={styles.agreementContainer}>
+                    <Text style={styles.agreementText}>{currentMessage.text}</Text>
+                    <TouchableOpacity
+                        style={styles.agreementButton}
+                        onPress={() => Linking.openURL(currentMessage.stripeUrl)}
+                    >
+                        <Text style={styles.agreementButtonText}>Accept & Pay</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        return null;
+    };
+
     const renderTime = (props) => {
         return (
             <Time
@@ -140,18 +218,56 @@ export default function ChatScreen() {
     );
 
     return (
-        <GiftedChat
-            messages={[...sendingMessages, ...messages]} // Combine sending and received messages
-            onSend={(messages) => onSend(messages)}
-            showUserAvatar={true}
-            user={{
-                _id: user?.primaryEmailAddress?.emailAddress,
-                name: user?.fullName,
-                avatar: user?.imageUrl,
-            }}
-            renderBubble={renderBubble} // Custom bubble
-            renderTime={renderTime} // Custom time display
-            renderMessageText={renderMessageText} // Custom message text
-        />
+        <View style={{ flex: 1 }}>
+            <GiftedChat
+                messages={[...sendingMessages, ...messages]} // Combine sending and received messages
+                onSend={(messages) => onSend(messages)}
+                showUserAvatar={true}
+                user={{
+                    _id: user?.primaryEmailAddress?.emailAddress,
+                    name: user?.fullName,
+                    avatar: user?.imageUrl,
+                }}
+                renderBubble={renderBubble}
+                renderTime={renderTime}
+                renderMessageText={renderMessageText}
+                renderCustomView={renderCustomView} // Custom agreement messages
+            />
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    headerButton: {
+        backgroundColor: "red",
+        borderRadius: 5,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        marginRight: 10, // Spacing from the edge
+    },
+    headerButtonText: {
+        color: "#fff",
+        fontWeight: "bold",
+        fontSize: 14,
+    },
+    agreementContainer: {
+        backgroundColor: "#f0f0f0",
+        borderRadius: 8,
+        padding: 10,
+        margin: 5,
+    },
+    agreementText: {
+        fontSize: 14,
+        marginBottom: 5,
+    },
+    agreementButton: {
+        backgroundColor: "#0084ff",
+        borderRadius: 5,
+        padding: 10,
+        alignItems: "center",
+    },
+    agreementButtonText: {
+        color: "#fff",
+        fontWeight: "bold",
+    },
+});
