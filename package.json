@@ -17,6 +17,7 @@
     "@clerk/clerk-expo": "^2.2.29",
     "@expo/metro-runtime": "~4.0.0",
     "@expo/vector-icons": "^14.0.2",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-firebase/app": "^21.3.0",
     "@react-native-firebase/firestore": "^21.3.0",
     "@react-native-picker/picker": "^2.9.0",
@@ -25,9 +26,11 @@
     "dotenv": "^16.4.7",
     "expo": "^52.0.23",
     "expo-constants": "~17.0.3",
+    "expo-device": "~7.0.2",
     "expo-font": "~13.0.2",
     "expo-image-picker": "~16.0.3",
     "expo-linking": "~7.0.3",
+    "expo-notifications": "~0.29.12",
     "expo-router": "~4.0.15",
     "expo-secure-store": "~14.0.0",
     "expo-splash-screen": "~0.29.18",
@@ -46,9 +49,7 @@
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-web": "^0.19.13",
-    "stripe": "^17.5.0",
-    "expo-notifications": "~0.29.11",
-    "expo-device": "~7.0.1"
+    "stripe": "^17.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

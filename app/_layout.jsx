@@ -1,8 +1,14 @@
 import { useFonts } from "expo-font";
-import { Link, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
-import { Text } from "react-native";
+import { ClerkProvider } from "@clerk/clerk-expo";
+import * as Notifications from "expo-notifications";
+import { useEffect } from "react";
+import { registerForPushNotificationsAsync } from "./notification";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../config/FirebaseConfig";
+import * as Device from "expo-device";
+
 const tokenCache = {
     async getToken(key) {
         try {
@@ -23,10 +29,11 @@ const tokenCache = {
         try {
             return SecureStore.setItemAsync(key, value);
         } catch (err) {
-            return;
+            console.error("SecureStore save item error:", err);
         }
     },
 };
+
 export default function RootLayout() {
     const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -37,10 +44,51 @@ export default function RootLayout() {
         "roboto-medium": require("./../assets/fonts/Roboto-Medium.ttf"),
     });
 
+    useEffect(() => {
+        const fetchAndSavePushToken = async () => {
+            if (Device.isDevice) {
+                // Get Expo Push Token
+                const token = await registerForPushNotificationsAsync();
+                if (token) {
+                    const user = await SecureStore.getItemAsync("clerk-user");
+                    if (user) {
+                        const userData = JSON.parse(user);
+                        const email = userData?.emailAddresses?.[0]?.emailAddress;
+                        if (email) {
+                            // Save the Expo Push Token in Firestore
+                            await setDoc(
+                                doc(db, "Users", email),
+                                { pushToken: token },
+                                { merge: true }
+                            );
+                        }
+                    }
+                }
+            } else {
+                console.log("Push notifications are only available on physical devices.");
+            }
+        };
+
+        fetchAndSavePushToken();
+
+        // Notification listeners for received notifications
+        const subscription = Notifications.addNotificationReceivedListener((notification) => {
+            console.log("Notification received:", notification);
+        });
+
+        const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+            console.log("Notification clicked:", response);
+        });
+
+        return () => {
+            subscription.remove();
+            responseSubscription.remove();
+        };
+    }, []);
+
     return (
         <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
             <Stack>
-                {/* <Stack.Screen name="index" /> */}
                 <Stack.Screen
                     name="(tabs)"
                     options={{
@@ -54,9 +102,6 @@ export default function RootLayout() {
                     }}
                 />
             </Stack>
-            {/* <Link href={'/login'}>
-          <Text>Login</Text>
-        </Link> */}
         </ClerkProvider>
     );
 }

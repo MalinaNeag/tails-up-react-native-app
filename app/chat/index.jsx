@@ -37,6 +37,7 @@ export default function ChatScreen() {
     const { user } = useUser();
     const [messages, setMessages] = useState([]);
     const [sendingMessages, setSendingMessages] = useState([]);
+    const [recipientEmail, setRecipientEmail] = useState("");
 
     useEffect(() => {
         GetUserDetails();
@@ -44,21 +45,21 @@ export default function ChatScreen() {
         const unsubscribe = onSnapshot(
             query(
                 collection(db, "Chat", params?.id, "Messages"),
-                orderBy("createdAt", "asc") // Ensure ascending order
+                orderBy("createdAt", "asc")
             ),
             (snapshot) => {
                 const messageData = snapshot.docs.map((doc) => {
-                    const createdAt = doc.data().createdAt?.toDate(); // Convert Firestore Timestamp to JS Date
+                    const createdAt = doc.data().createdAt?.toDate();
 
                     return {
                         _id: doc.id,
                         ...doc.data(),
-                        createdAt: createdAt || new Date(), // Fallback to current date if `createdAt` is undefined
+                        createdAt: createdAt || new Date(),
                         sending: false,
                     };
                 });
 
-                setMessages(messageData.reverse()); // Reverse the array for GiftedChat's descending order
+                setMessages(messageData.reverse());
             }
         );
 
@@ -73,6 +74,10 @@ export default function ChatScreen() {
         const otherUser = result?.users.filter(
             (item) => item.email !== user?.primaryEmailAddress?.emailAddress
         );
+
+        if (otherUser?.[0]) {
+            setRecipientEmail(otherUser[0]?.email); // Store recipient's email
+        }
 
         navigation.setOptions({
             headerTitle: otherUser?.[0]?.name || "Chat",
@@ -90,9 +95,11 @@ export default function ChatScreen() {
     const onSend = async (newMessage) => {
         const messageToSend = {
             ...newMessage[0],
-            _id: `${newMessage[0]._id}-${Date.now()}`, // Ensure uniqueness by appending a timestamp
+            _id: `${newMessage[0]._id}-${Date.now()}`,
+            text: newMessage[0].text,
             createdAt: Timestamp.now(),
-            sending: true,
+            sender: user?.primaryEmailAddress?.emailAddress,
+            recipient: recipientEmail, // Add recipient's email
         };
 
         setSendingMessages((prevState) => [...prevState, messageToSend]);
@@ -121,6 +128,7 @@ export default function ChatScreen() {
                 type: "agreement",
                 createdAt: Timestamp.now(),
                 sender: user?.primaryEmailAddress?.emailAddress,
+                recipient: recipientEmail,
                 status: "pending",
                 stripeUrl,
             };
@@ -185,11 +193,8 @@ export default function ChatScreen() {
                     text: "",
                     image: downloadUrl,
                     createdAt: Timestamp.now(),
-                    user: {
-                        _id: user?.primaryEmailAddress?.emailAddress,
-                        name: user?.fullName,
-                        avatar: user?.imageUrl,
-                    },
+                    sender: user?.primaryEmailAddress?.emailAddress,
+                    recipient: recipientEmail,
                 };
 
                 await addDoc(

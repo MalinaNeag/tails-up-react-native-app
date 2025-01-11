@@ -62,7 +62,7 @@ export default function LoginScreen() {
                 console.log("[OAuth] Session created successfully!");
                 Alert.alert("Success", "You are    now logged in.");
             } else {
-                console.warn("[OAuth] Session not created. Please try again..");
+                console.warn("[OAuth] Session not          created. Please try again..");
                 Alert.alert("Login Failed", "Session could not be created.");
             }
         } catch (err) {
