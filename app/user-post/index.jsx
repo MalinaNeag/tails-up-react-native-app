@@ -79,7 +79,7 @@ export default function UserPost() {
                     fontSize: 30,
                 }}
             >
-                UserPost
+                User Post
             </Text>
 
             <FlatList

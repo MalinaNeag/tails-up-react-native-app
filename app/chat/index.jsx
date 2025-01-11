@@ -4,6 +4,7 @@ import {
     ActivityIndicator,
     StyleSheet,
     TouchableOpacity,
+    Image,
     Linking,
 } from "react-native";
 import React, { useEffect, useState } from "react";
@@ -16,15 +17,19 @@ import {
     onSnapshot,
     Timestamp,
 } from "firebase/firestore";
-import { db } from "../../config/FirebaseConfig";
+import { db, storage } from "../../config/FirebaseConfig";
+import { query, orderBy } from "firebase/firestore";
 import { useUser } from "@clerk/clerk-expo";
 import {
     GiftedChat,
     Bubble,
     Time,
     MessageText,
+    InputToolbar,
 } from "react-native-gifted-chat";
-import moment from "moment";
+import * as ImagePicker from "expo-image-picker";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function ChatScreen() {
     const params = useLocalSearchParams();
@@ -37,26 +42,26 @@ export default function ChatScreen() {
         GetUserDetails();
 
         const unsubscribe = onSnapshot(
-            collection(db, "Chat", params?.id, "Messages"),
+            query(
+                collection(db, "Chat", params?.id, "Messages"),
+                orderBy("createdAt", "asc") // Ensure ascending order
+            ),
             (snapshot) => {
-                const messageData = snapshot.docs
-                    .map((doc) => {
-                        const createdAt = doc.data().createdAt?.toDate(); // Convert Firebase Timestamp to Date
-                        const adjustedTime = createdAt
-                            ? new Date(createdAt.getTime() + 2 * 60 * 60 * 1000) // Add 2 hours
-                            : null;
+                const messageData = snapshot.docs.map((doc) => {
+                    const createdAt = doc.data().createdAt?.toDate(); // Convert Firestore Timestamp to JS Date
 
-                        return {
-                            _id: doc.id,
-                            ...doc.data(),
-                            createdAt: adjustedTime, // Use adjusted time
-                            sending: false, // Mark all received messages as sent
-                        };
-                    })
-                    .sort((a, b) => b.createdAt - a.createdAt); // Sort by Date
-                setMessages(messageData);
+                    return {
+                        _id: doc.id,
+                        ...doc.data(),
+                        createdAt: createdAt || new Date(), // Fallback to current date if `createdAt` is undefined
+                        sending: false,
+                    };
+                });
+
+                setMessages(messageData.reverse()); // Reverse the array for GiftedChat's descending order
             }
         );
+
         return () => unsubscribe();
     }, []);
 
@@ -85,11 +90,12 @@ export default function ChatScreen() {
     const onSend = async (newMessage) => {
         const messageToSend = {
             ...newMessage[0],
-            createdAt: Timestamp.now(), // Use Firebase Timestamp
-            sending: true, // Mark as sending initially
+            _id: `${newMessage[0]._id}-${Date.now()}`, // Ensure uniqueness by appending a timestamp
+            createdAt: Timestamp.now(),
+            sending: true,
         };
 
-        setSendingMessages((prevState) => [...prevState, messageToSend]); // Temporarily add message to sending state
+        setSendingMessages((prevState) => [...prevState, messageToSend]);
 
         try {
             await addDoc(
@@ -99,7 +105,7 @@ export default function ChatScreen() {
 
             setSendingMessages((prevState) =>
                 prevState.filter((msg) => msg._id !== messageToSend._id)
-            ); // Remove message from sending state
+            );
         } catch (error) {
             console.error("Error sending message:", error);
         }
@@ -107,7 +113,7 @@ export default function ChatScreen() {
 
     const sendAgreement = async () => {
         try {
-            const stripeUrl = await createStripeSession(5000); // Example amount: $50.00
+            const stripeUrl = await createStripeSession(5000);
 
             const agreementMessage = {
                 _id: Date.now().toString(),
@@ -119,61 +125,114 @@ export default function ChatScreen() {
                 stripeUrl,
             };
 
-            await addDoc(collection(db, "Chat", params.id, "Messages"), agreementMessage);
+            await addDoc(
+                collection(db, "Chat", params.id, "Messages"),
+                agreementMessage
+            );
         } catch (error) {
             console.error("Error sending agreement:", error);
         }
     };
 
-const createStripeSession = async (amount) => {
-    try {
-        const response = await fetch("https://your-backend-url/create-checkout-session", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ amount }),
-        });
+    const createStripeSession = async (amount) => {
+        try {
+            const response = await fetch(
+                "https://your-backend-url/create-checkout-session",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ amount }),
+                }
+            );
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const { url } = await response.json();
+            return url;
+        } catch (error) {
+            console.error("Error creating Stripe session:", error);
+            throw error;
         }
-
-        const { url } = await response.json();
-        return url; // Stripe Checkout URL
-    } catch (error) {
-        console.error("Error creating Stripe session:", error);
-        throw error;
-    }
-};
-
-    const renderBubble = (props) => {
-        const isSending = props.currentMessage.sending;
-        return (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Bubble
-                    {...props}
-                    wrapperStyle={{
-                        right: { backgroundColor: "#0084ff" },
-                        left: { backgroundColor: "#f0f0f0" },
-                    }}
-                    textStyle={{
-                        right: { color: "#fff" },
-                        left: { color: "#000" },
-                    }}
-                />
-                {isSending && (
-                    <ActivityIndicator
-                        size="small"
-                        color="#0084ff"
-                        style={{ marginLeft: 5 }}
-                    />
-                )}
-            </View>
-        );
     };
 
+    const pickImageAndSend = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 1,
+            });
 
+            if (!result.canceled) {
+                const imageUri = result.assets[0].uri;
+                const response = await fetch(imageUri);
+                const blob = await response.blob();
+                const storageRef = ref(
+                    storage,
+                    `chat-images/${Date.now()}.jpg`
+                );
+                await uploadBytes(storageRef, blob);
+
+                const downloadUrl = await getDownloadURL(storageRef);
+
+                const imageMessage = {
+                    _id: Date.now().toString(),
+                    text: "",
+                    image: downloadUrl,
+                    createdAt: Timestamp.now(),
+                    user: {
+                        _id: user?.primaryEmailAddress?.emailAddress,
+                        name: user?.fullName,
+                        avatar: user?.imageUrl,
+                    },
+                };
+
+                await addDoc(
+                    collection(db, "Chat", params.id, "Messages"),
+                    imageMessage
+                );
+            }
+        } catch (error) {
+            console.error("Error picking or sending image:", error);
+        }
+    };
+
+    const renderInputToolbar = (props) => (
+        <InputToolbar
+            {...props}
+            containerStyle={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 10,
+                borderTopWidth: 1,
+                borderColor: "#ddd",
+            }}
+            renderActions={() => (
+                <TouchableOpacity onPress={pickImageAndSend}>
+                    <Ionicons name="image-outline" size={30} color="blue" />
+                </TouchableOpacity>
+            )}
+        />
+    );
+
+    const renderBubble = (props) => (
+        <Bubble
+            {...props}
+            wrapperStyle={{
+                right: { backgroundColor: "#0084ff" },
+                left: { backgroundColor: "#f0f0f0" },
+            }}
+            textStyle={{
+                right: { color: "#fff" },
+                left: { color: "#000" },
+            }}
+        />
+    );
 
     const renderCustomView = (props) => {
         const { currentMessage } = props;
@@ -181,12 +240,18 @@ const createStripeSession = async (amount) => {
         if (currentMessage.type === "agreement") {
             return (
                 <View style={styles.agreementContainer}>
-                    <Text style={styles.agreementText}>{currentMessage.text}</Text>
+                    <Text style={styles.agreementText}>
+                        {currentMessage.text}
+                    </Text>
                     <TouchableOpacity
                         style={styles.agreementButton}
-                        onPress={() => Linking.openURL(currentMessage.stripeUrl)}
+                        onPress={() =>
+                            Linking.openURL(currentMessage.stripeUrl)
+                        }
                     >
-                        <Text style={styles.agreementButtonText}>Accept & Pay</Text>
+                        <Text style={styles.agreementButtonText}>
+                            Accept & Pay
+                        </Text>
                     </TouchableOpacity>
                 </View>
             );
@@ -195,17 +260,15 @@ const createStripeSession = async (amount) => {
         return null;
     };
 
-    const renderTime = (props) => {
-        return (
-            <Time
-                {...props}
-                timeTextStyle={{
-                    right: { color: "#fff" },
-                    left: { color: "#000" },
-                }}
-            />
-        );
-    };
+    const renderTime = (props) => (
+        <Time
+            {...props}
+            timeTextStyle={{
+                right: { color: "#fff" },
+                left: { color: "#000" },
+            }}
+        />
+    );
 
     const renderMessageText = (props) => (
         <MessageText
@@ -217,21 +280,34 @@ const createStripeSession = async (amount) => {
         />
     );
 
+    const renderMessageImage = (props) => (
+        <Image
+            source={{ uri: props.currentMessage.image }}
+            style={{
+                width: 200,
+                height: 200,
+                borderRadius: 10,
+                margin: 5,
+            }}
+        />
+    );
+
     return (
         <View style={{ flex: 1 }}>
             <GiftedChat
-                messages={[...sendingMessages, ...messages]} // Combine sending and received messages
+                messages={[...sendingMessages, ...messages]}
                 onSend={(messages) => onSend(messages)}
-                showUserAvatar={true}
                 user={{
                     _id: user?.primaryEmailAddress?.emailAddress,
                     name: user?.fullName,
                     avatar: user?.imageUrl,
                 }}
+                renderInputToolbar={renderInputToolbar}
+                renderMessageImage={renderMessageImage}
                 renderBubble={renderBubble}
+                renderCustomView={renderCustomView}
                 renderTime={renderTime}
                 renderMessageText={renderMessageText}
-                renderCustomView={renderCustomView} // Custom agreement messages
             />
         </View>
     );
@@ -243,7 +319,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         paddingVertical: 5,
         paddingHorizontal: 10,
-        marginRight: 10, // Spacing from the edge
+        marginRight: 10,
     },
     headerButtonText: {
         color: "#fff",
