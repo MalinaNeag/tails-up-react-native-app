@@ -111,47 +111,31 @@ const onSend = async (newMessage) => {
     }
 };
 
-    const sendAgreement = async () => {
-        try {
-            const stripeUrl = await createStripeSession(5000);
-
-            const agreementMessage = {
-                _id: Date.now().toString(),
-                text: "Please accept the hosting request by clicking the button below.",
-                type: "agreement",
-                createdAt: Timestamp.now(),
-                sender: user?.primaryEmailAddress?.emailAddress,
-                status: "pending",
-                stripeUrl,
-            };
-
-            await addDoc(collection(db, "Chat", params.id, "Messages"), agreementMessage);
-        } catch (error) {
-            console.error("Error sending agreement:", error);
-        }
-    };
-
-    const createStripeSession = async (amount) => {
-        try {
-            const response = await fetch("https://your-backend-url/create-checkout-session", {
+const sendAgreement = async () => {
+    try {
+        const response = await fetch(
+            "https://us-central1-your-project-id.cloudfunctions.net/createCheckoutSession",
+            {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ amount }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                body: JSON.stringify({ amount: 5000 }), // Amount in cents ($50)
             }
+        );
 
-            const { url } = await response.json();
-            return url;
-        } catch (error) {
-            console.error("Error creating Stripe session:", error);
-            throw error;
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    };
+
+        const { url } = await response.json();
+
+        // Open the Stripe payment page
+        Linking.openURL(url);
+    } catch (error) {
+        console.error("Error creating Stripe session:", error);
+    }
+};
 
     const pickImageAndSend = async () => {
         try {
