@@ -62,7 +62,7 @@ export default function LoginScreen() {
                 console.log("[OAuth] Session created successfully!");
                 Alert.alert("Success", "You are    now logged in.");
             } else {
-                console.warn("[OAuth] Session not created. Please try again.");
+                console.warn("[OAuth] Session not created. Please try again..");
                 Alert.alert("Login Failed", "Session could not be created.");
             }
         } catch (err) {
@@ -74,7 +74,10 @@ export default function LoginScreen() {
                 );
             } else {
                 console.error("[OAuth] Error during OAuth flow:", err.message);
-                Alert.alert("Error", "An unexpected error occurred. Please try again.");
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
             }
         } finally {
             setIsLoading(false);

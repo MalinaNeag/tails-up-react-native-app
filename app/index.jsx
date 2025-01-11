@@ -13,7 +13,9 @@ export default function Index() {
                 console.log("[Auth] User is signed in. Navigating to home...");
                 router.replace("/(tabs)/home");
             } else {
-                console.log("[Auth] User is not signed in. Navigating to login...");
+                console.log(
+                    "[Auth] User is not signed in. Navigating to login... "
+                );
                 router.replace("/login");
             }
         }
