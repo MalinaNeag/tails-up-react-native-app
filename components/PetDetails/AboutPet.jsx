@@ -7,7 +7,7 @@ export default function AboutPet({ pet }) {
     return (
         <View
             style={{
-                padding: 20,
+                padding: 30,
             }}
         >
             <Text

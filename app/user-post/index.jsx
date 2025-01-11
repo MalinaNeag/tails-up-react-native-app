@@ -21,7 +21,7 @@ export default function UserPost() {
     const [userPostList, setUserPostList] = useState([]);
     useEffect(() => {
         navigation.setOptions({
-            headerTitle: "User Post",
+            headerTitle: "My Posts",
         });
         user && GetUserPost();
     }, [user]);
@@ -45,21 +45,17 @@ export default function UserPost() {
     };
 
     const OnDeletePost = (docId) => {
-        Alert.alert(
-            "Do You want to Delete?",
-            "Do you really want to delete this post",
-            [
-                {
-                    text: "Cancel",
-                    onPress: () => console.log("Cancel Click"),
-                    style: "cancel",
-                },
-                {
-                    text: "Delete",
-                    onPress: () => deletePost(docId),
-                },
-            ]
-        );
+        Alert.alert("Delete?", "Do you really want to delete this post?", [
+            {
+                text: "Cancel",
+                onPress: () => console.log("Cancel Click"),
+                style: "cancel",
+            },
+            {
+                text: "Delete",
+                onPress: () => deletePost(docId),
+            },
+        ]);
     };
 
     const deletePost = async (docId) => {
@@ -73,6 +69,7 @@ export default function UserPost() {
                 padding: 20,
             }}
         >
+            {/* 
             <Text
                 style={{
                     fontFamily: "roboto-medium",
@@ -80,8 +77,7 @@ export default function UserPost() {
                 }}
             >
                 User Post
-            </Text>
-
+            </Text>*/}
             <FlatList
                 data={userPostList}
                 numColumns={2}
@@ -106,7 +102,6 @@ export default function UserPost() {
                     </View>
                 )}
             />
-
             {userPostList?.length == 0 && <Text>No Post Found</Text>}
         </View>
     );

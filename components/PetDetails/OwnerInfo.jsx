@@ -39,15 +39,14 @@ export default function OwnerInfo({ pet }) {
                     </Text>
                 </View>
             </View>
-            <Ionicons name="send-sharp" size={24} color={Colors.PRIMARY} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        marginHorizontal: 20,
-        paddingHorizontal: 20,
+        marginHorizontal: 30,
+        paddingHorizontal: 30,
         display: "flex",
         flexDirection: "row",
         alignItems: "center",

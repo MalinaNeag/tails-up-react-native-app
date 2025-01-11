@@ -19,16 +19,21 @@ import { db, storage } from "../../config/FirebaseConfig";
 import * as ImagePicker from "expo-image-picker";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useUser } from "@clerk/clerk-expo";
+import { Calendar, DateObject } from "react-native-calendars";
 
 export default function AddNewPet() {
     const navigation = useNavigation();
-    const [formData, setFormData] = useState({ category: "Dogs", sex: "Male" });
+    const [formData, setFormData] = useState({
+        category: "Dogs",
+        gender: "Male",
+    });
     const [gender, setGender] = useState();
     const [categoryList, setCategortList] = useState([]);
     const [selectedCategory, setSelectedategory] = useState();
     const [image, setImage] = useState();
     const [loader, setLoader] = useState(false);
     const { user } = useUser();
+    const [selectedDates, setSelectedDates] = useState({}); // Tracks selected dates
     const router = useRouter();
     useEffect(() => {
         navigation.setOptions({
@@ -72,9 +77,26 @@ export default function AddNewPet() {
             [fieldName]: fieldValue,
         }));
     };
+    const handleDateSelect = (day) => {
+        const dateString = day.dateString;
+        setSelectedDates((prevDates) => {
+            const newDates = { ...prevDates };
+            if (newDates[dateString]) {
+                delete newDates[dateString]; // Deselect if already selected
+            } else {
+                newDates[dateString] = {
+                    selected: true,
+                    selectedColor: Colors.PRIMARY,
+                };
+            }
+            // Update formData with selected dates
+            handleInputChange("availability", Object.keys(newDates).join(", "));
+            return newDates;
+        });
+    };
 
     const onSubmit = () => {
-        if (Object.keys(formData).length != 8) {
+        if (Object.keys(formData).length != 9) {
             ToastAndroid.show("Enter All Details", ToastAndroid.SHORT);
             return;
         }
@@ -89,7 +111,7 @@ export default function AddNewPet() {
 
         const resp = await fetch(image);
         const blobImage = await resp.blob();
-        const storageRef = ref(storage, Date.now() + ".jpg");
+        const storageRef = ref(storage, "Pets/" + Date.now() + ".jpg");
         console.log(storageRef);
         uploadBytes(storageRef, blobImage)
             .then((snapshot) => {
@@ -128,7 +150,7 @@ export default function AddNewPet() {
                     fontSize: 20,
                 }}
             >
-                Add New Pet for adoption
+                Add new pet for hosting
             </Text>
 
             <Pressable onPress={imagePicker}>
@@ -154,6 +176,14 @@ export default function AddNewPet() {
                     />
                 )}
             </Pressable>
+
+            <View style={styles.inputContainer}>
+                <Text style={styles.label}>Availability *</Text>
+                <Calendar
+                    onDayPress={handleDateSelect}
+                    markedDates={selectedDates}
+                />
+            </View>
 
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Pet Name *</Text>
@@ -206,7 +236,7 @@ export default function AddNewPet() {
                     style={styles.input}
                     onValueChange={(itemValue, itemIndex) => {
                         setGender(itemValue);
-                        handleInputChange("sex", itemValue);
+                        handleInputChange("gender", itemValue);
                     }}
                 >
                     <Picker.Item label="Male" value="Male" />

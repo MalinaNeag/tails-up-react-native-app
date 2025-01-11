@@ -22,6 +22,7 @@ import {
     where,
 } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
+import DisplayAvailability from "../../components/PetDetails/DisplayAvailability";
 
 export default function PetDetails() {
     const pet = useLocalSearchParams();
@@ -34,15 +35,8 @@ export default function PetDetails() {
             headerTransparent: true,
             headerTitle: "",
         });
-
-        // Debug message for the pet object
-        //console.log("Pet data:", pet?.id);
-        //console.log("Pet imageUrl:", pet?.imageUrl);
     }, [pet]);
 
-    /**
-     * Used to Initiate the chat between two users
-     */
     const InitiateChat = async () => {
         const docId1 =
             user?.primaryEmailAddress?.emailAddress + "_" + pet?.email;
@@ -55,14 +49,13 @@ export default function PetDetails() {
         );
         const querySnapshot = await getDocs(q);
         querySnapshot.forEach((doc) => {
-            console.log(doc.data());
             router.push({
                 pathname: "/chat",
                 params: { id: doc.id },
             });
         });
 
-        if (querySnapshot.docs?.length == 0) {
+        if (querySnapshot.docs?.length === 0) {
             await setDoc(doc(db, "Chat", docId1), {
                 id: docId1,
                 users: [
@@ -80,9 +73,6 @@ export default function PetDetails() {
                 userIds: [user?.primaryEmailAddress?.emailAddress, pet?.email],
             });
 
-            // Debug message for the new chat document
-            console.log("New chat document created with id:", docId1);
-
             router.push({
                 pathname: "/chat",
                 params: { id: docId1 },
@@ -93,20 +83,15 @@ export default function PetDetails() {
     return (
         <View>
             <ScrollView>
-                {/* Debug message for rendering components */}
-                {console.log("Rendering PetInfo with pet:", pet)}
-                {/* Pet Info  */}
                 <PetInfo pet={pet} />
-                {/* Pet SubInfo  */}
                 <PetSubInfo pet={pet} />
-                {/* about  */}
                 <AboutPet pet={pet} />
-                {/* owner details   */}
+                <DisplayAvailability pet={pet} />
                 <OwnerInfo pet={pet} />
+
                 <View style={{ height: 70 }}></View>
             </ScrollView>
-            {/* Host me button  */}
-            <View style={styles?.bottomContainer}>
+            <View style={styles.bottomContainer}>
                 <TouchableOpacity onPress={InitiateChat} style={styles.hostBtn}>
                     <Text
                         style={{

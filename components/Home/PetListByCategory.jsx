@@ -1,4 +1,4 @@
-import { View, Text, FlatList } from "react-native";
+import { View, FlatList, StyleSheet } from "react-native";
 import React, { useEffect, useState } from "react";
 import Category from "./Category";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -8,8 +8,9 @@ import PetListItem from "./PetListItem";
 export default function PetListByCategory() {
     const [petList, setPetList] = useState([]);
     const [loader, setLoader] = useState(false);
+
     useEffect(() => {
-        GetPetList("/Category/Dogs");
+        GetPetList("Dogs");
     }, []);
 
     const GetPetList = async (category) => {
@@ -31,18 +32,33 @@ export default function PetListByCategory() {
     };
 
     return (
-        <View>
+        <View style={styles.container}>
             <Category category={(value) => GetPetList(value)} />
 
             <FlatList
                 data={petList}
-                style={{ marginTop: 10 }}
-                horizontal={true}
+                keyExtractor={(item) => item.id}
+                style={styles.list}
                 refreshing={loader}
-                showsHorizontalScrollIndicator={false}
+                numColumns={2} // Display 2 items per row
+                columnWrapperStyle={styles.row} // Style for rows
+                showsVerticalScrollIndicator={false}
                 onRefresh={() => GetPetList("Dogs")}
-                renderItem={({ item, index }) => <PetListItem pet={item} />}
+                renderItem={({ item }) => <PetListItem pet={item} />}
             />
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    list: {
+        marginTop: 10,
+    },
+    row: {
+        justifyContent: "space-between", // Space out items in a row
+        marginBottom: 10, // Add spacing between rows
+    },
+});
